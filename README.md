@@ -146,20 +146,6 @@ to research your editor, check for existing integration, and implement the four
 review actions (add note, view, dispatch, clear) using the editor's native
 mechanisms. The reference implementation for Neovim is included as an example.
 
-## tmux keybindings
-
-Add these to `~/.tmux.conf` to manage worktrees without leaving tmux:
-
-```tmux
-# Create a new worktree (prompts for name)
-bind N command-prompt -p "new worktree name:" \
-  "run-shell 'cd #{pane_current_path}/.. && zproj %% > /dev/null 2>&1'"
-
-# Delete the current worktree (asks for confirmation)
-bind X confirm-before -p "delete worktree '#{window_name}'? (y/n)" \
-  "run-shell 'cd #{pane_current_path}/.. && zproj delete #{window_name} --force > /dev/null 2>&1; tmux refresh-client'"
-```
-
 ## Command reference
 
 ```

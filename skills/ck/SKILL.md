@@ -23,18 +23,7 @@ excluded files. The default `.ckignore` (auto-created on first `--index`) exclud
 excluded files (config files, data files, lockfiles, etc.), use `grep` or `rg`
 directly — `ck` will never find them. When in doubt, check `.ckignore` first.
 
-## When to Use ck vs cqs
-
-| Task | Tool |
-|---|---|
-| Find code by concept, pattern, or meaning | `ck --sem` |
-| Find exact identifiers or regex patterns | `ck` (default) |
-| Search config, JSON, YAML, lockfiles | `grep` or `rg` (excluded by `.ckignore`) |
-| Who calls this function? | `cqs callers` |
-| What breaks if I change this? | `cqs impact` |
-| Refactoring safety check | `cqs impact` + `cqs callers` |
-| Understand a whole subsystem | `cqs gather` or `cqs onboard` |
-| Find dead code | `cqs dead` |
+For call graph analysis (who calls this function, what breaks if I change it), use `cqs` instead.
 
 ## Search Modes
 

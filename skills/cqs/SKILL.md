@@ -60,19 +60,7 @@ cqs index
 
 A typical feature branch touching 10–20 files completes in well under a minute.
 
-## When to Use cqs vs ck
-
-| Task | Tool |
-|---|---|
-| Find code by concept or pattern | `ck` or `cqs` |
-| Who calls this function? | `cqs callers` |
-| What breaks if I change this? | `cqs impact` |
-| Is it safe to rename/move/delete this? | `cqs impact` + `cqs callers` |
-| Find dead code | `cqs dead` |
-| Understand a whole subsystem | `cqs gather` or `cqs onboard` |
-| Prepare an implementation brief | `cqs task` or `cqs scout` |
-| Review a diff before committing | `cqs review` |
-| Search config/JSON/YAML files | `ck` is excluded by `.ckignore` — use `grep`/`rg` |
+For finding code by text, pattern, or concept, use `ck` instead — `cqs` does not search source files.
 
 ## Critical Syntax Rules
 

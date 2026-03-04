@@ -57,10 +57,10 @@ ln -s ~/Documents/git/zproj/main/zproj ~/.local/bin/zproj
 zproj --version
 ```
 
-> **Note:** Clone the repo rather than copying the script. The `skills/`
-> directory next to the script is needed for `zproj integrate` to install
-> skill files and tools. A standalone script copy will warn gracefully but
-> cannot install skills.
+> **Note:** Clone the repo rather than copying the script. The `skills/` and
+> `rules/` directories next to the script are needed for `zproj integrate` to
+> install skill files, rules, and tools. A standalone script copy will warn
+> gracefully but cannot install skills or rules.
 
 ## Quick start
 
@@ -159,7 +159,10 @@ The notes file is deleted after the temp file is safely written.
 3. **Copies skill files** from `skills/*/SKILL.md` in the zproj repo into
    your coding agent's global skills directory (e.g.
    `~/.config/opencode/skills/` for OpenCode)
-4. **Asks your coding agent** to implement the review workflow in your editor
+4. **Installs instruction rules** from `rules/*.md` in the zproj repo into
+   the agent's global instructions file (e.g.
+   `~/.config/opencode/AGENTS.md` for OpenCode)
+5. **Asks your coding agent** to implement the review workflow in your editor
    (add note / view / dispatch / clear), using the Neovim reference
    implementation as a concrete example
 
@@ -187,6 +190,23 @@ The `skills/` directory in this repo contains skill files for:
 - **`cqs`** — call graphs, impact analysis, refactoring safety, dead code
 
 Add a `skills/<toolname>/SKILL.md` to the repo and it will be installed
+automatically on the next `zproj integrate` run.
+
+### Bundled rules
+
+The `rules/` directory contains instruction rules installed into the agent's
+global instructions file. Each rule is a Markdown file with YAML frontmatter:
+
+```markdown
+---
+marker: "stable substring for idempotent detection"
+---
+The rule text appended to the instructions file.
+```
+
+The `marker:` field is a stable substring used to detect whether the rule is
+already present — so the rule is never duplicated even if the user edits the
+file. Add a `rules/<name>.md` to the repo and it will be installed
 automatically on the next `zproj integrate` run.
 
 ## Command reference

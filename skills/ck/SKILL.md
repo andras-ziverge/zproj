@@ -10,7 +10,25 @@ metadata:
 
 # ck — Semantic Code Search
 
-**`.ckignore` excludes files from all search modes** — use `grep`/`rg` for excluded types (`.json`, `.yaml`, etc.). Check `.ckignore` if expected files aren't appearing.
+## Setup
+
+```bash
+ck --index .     # build index (required for --sem, --lex, --hybrid)
+ck --status .    # check index status
+ck --clean .     # remove entire index
+```
+
+Auto-indexes on first `--sem`. Run `--index` explicitly before using `--lex` or `--hybrid`.
+
+**`.ckignore`** excludes files from all search modes — use `grep`/`rg` for excluded types (`.json`, `.yaml`, etc.). Auto-created on first `--index`; check it if expected files aren't appearing.
+
+**Gitignore:** Run `echo "*" > .ck/.gitignore` after first indexing — `ck` does not create this automatically.
+
+**Git worktrees (zproj):** never cold-index a new worktree — copy from a sibling:
+
+```bash
+ls -dt ../*/. | head -5 && cp -r ../main/.ck ./.ck && echo "*" > .ck/.gitignore && ck --index .
+```
 
 For call graph analysis (who calls this, what breaks if I change it), use `cqs` instead.
 
@@ -23,6 +41,8 @@ For call graph analysis (who calls this, what breaks if I change it), use `cqs` 
 | Hybrid | `--hybrid` | Balance precision and recall |
 | Regex | _(default)_ | Exact identifiers and patterns — `fn authenticate`, `class.*Handler` |
 
+## Critical Syntax Rules
+
 **Quoting:** Use single quotes for patterns containing `$` or `[` — double quotes allow shell expansion that silently corrupts the pattern.
 
 ```bash
@@ -30,30 +50,9 @@ ck 'Scope\.$'   # correct
 ck "Scope\.$"   # wrong — $ may be expanded by the shell
 ```
 
-## Index Management
-
-```bash
-ck --index .     # Build index (required for --sem, --lex, --hybrid)
-ck --status .    # Check index status
-ck --clean .     # Remove entire index
-```
-
-Auto-indexes on first `--sem`. Run `--index` explicitly before using `--lex` or `--hybrid` — auto-indexing does not prepare those modes.
-
-**Gitignore:** Run `echo "*" > .ck/.gitignore` after first indexing — `ck` does not create this automatically.
-
-## Git Worktrees (zproj)
-
-**Never cold-index a new worktree.** Copy from a sibling and delta-index:
-
-```bash
-ls -dt ../*/. | head -5       # find most recently indexed sibling
-cp -r ../main/.ck ./.ck
-echo "*" > .ck/.gitignore
-ck --index .
-```
-
 ## Common Invocations
+
+Default `--sem` threshold is `0.6`. Too few results → lower; too many → raise. Range: `0.3`–`0.9`. `--hybrid` uses RRF — useful range is `0.01`–`0.05`.
 
 ```bash
 ck --sem "error handling" .
@@ -67,10 +66,6 @@ ck --jsonl --sem "error handling" .                 # JSONL for agent consumptio
 ck --jsonl --no-snippet --sem "error handling" .
 ck --json --sem "error handling" .                  # JSON (fields: file, preview, lang)
 ```
-
-## Adaptive Threshold
-
-Default `--sem` threshold is `0.6`. Too few results → lower; too many → raise. Range: `0.3`–`0.9`. `--hybrid` uses RRF — useful range is `0.01–0.05`.
 
 ## Do / Don't
 

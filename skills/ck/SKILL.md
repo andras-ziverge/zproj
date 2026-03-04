@@ -48,8 +48,7 @@ the BM25 index is ready for `--lex`.
 ## Index Management
 
 `ck` auto-indexes on first `--sem` search. Run `--index` explicitly to ensure
-embeddings are present before using `--lex` or `--hybrid`. Indexing costs ~10s
-per 100K LOC; searches are <500ms once indexed.
+embeddings are present before using `--lex` or `--hybrid`.
 
 On first index, `ck` auto-creates a `.ckignore` with default exclusions (including
 `.json` and `.yaml`). Check this file if expected files aren't being found.
@@ -59,66 +58,20 @@ On first index, `ck` auto-creates a `.ckignore` with default exclusions (includi
 worktree, or index files will appear as untracked in `git status`.
 
 ```bash
-ck --index .            # Build index with embeddings (required for --sem, --lex, --hybrid)
-ck --status .           # Check index status (shows file count and embedded chunk count)
-ck --status-verbose .   # Detailed index statistics
-ck --clean-orphans .    # Remove stale entries only
-ck --clean .            # Remove entire index
+ck --index .     # Build index (required for --sem, --lex, --hybrid)
+ck --status .    # Check index status
+ck --clean .     # Remove entire index
 ```
 
 ## Git Worktrees (zproj)
 
-Projects use a bare repo structure where worktrees are siblings in a parent directory:
-
-```
-project-name/          ← bare repo root (contains .bare/)
-  main/                ← main worktree  (has .ck/ index)
-  feature-foo/         ← feature worktree (new, no index yet)
-  feature-bar/         ← another worktree
-```
-
-**Never cold-index a new worktree.** Both `ck` and `cqs` use relative paths and
-content-hash caching (not mtime). Copying an index from a sibling worktree is safe
-and reduces indexing time from minutes to under a second.
-
-**Workflow for a new worktree:**
+**Never cold-index a new worktree.** Copy the index from a sibling and delta-index instead:
 
 ```bash
-# 1. Find the most recently indexed sibling
-ls -dt ../*/. | head -5                          # list siblings by recency
-
-# 2. Copy its index into the new worktree
-cp -r ../main/.ck ./.ck
-
-# 3. Delta-index — only changed files are re-embedded (typically <1s)
-ck --index .
-```
-
-`ck` re-indexes in ~0.2s on a copied worktree even when all file mtimes differ,
-because it detects identical content by hash and reuses cached embeddings.
-Only files that actually changed on the feature branch get re-processed.
-
-**After copying, create the gitignore if not already present:**
-```bash
-echo "*" > .ck/.gitignore
-```
-
-## Recommended Workflow
-
-### Stage 1: Discover with semantic search
-
-```bash
-ck --sem "authentication" .
-ck --sem "error handling" src/
-ck --sem "database connection" .
-```
-
-### Stage 2: Refine with hybrid or regex once you have identifiers
-
-```bash
-# Found `authenticateUser` in stage 1 — now find all usages
-ck --hybrid "authenticateUser" .
-ck "fn authenticateUser" src/
+ls -dt ../*/. | head -5       # find most recently indexed sibling
+cp -r ../main/.ck ./.ck       # copy its index
+echo "*" > .ck/.gitignore     # prevent index files polluting git
+ck --index .                  # delta-index (typically <1s)
 ```
 
 ## Common Invocations
@@ -127,97 +80,53 @@ ck "fn authenticateUser" src/
 # Semantic — find by concept
 ck --sem "error handling" .
 ck --sem "database connection" src/
-
-# Raise precision (fewer, better results)
-ck --sem --threshold 0.8 "authentication logic" .
-
-# Lower precision (broader sweep)
-ck --sem --threshold 0.5 "retry" .
-
-# Limit result count
+ck --sem --threshold 0.8 "authentication logic" .   # raise precision
+ck --sem --threshold 0.5 "retry" .                  # lower precision
 ck --sem --limit 10 "caching strategy" .
-
-# Show relevance scores (score appears on its own line before each result block)
-ck --sem --scores "retry logic" .
-
-# Rerank results for better relevance ordering
 ck --sem --rerank "authentication logic" .
 
-# Specify reranking model (jina or bge, default: jina)
-ck --sem --rerank --rerank-model bge "authentication logic" .
-
-# Hybrid — regex + semantic combined (use threshold 0.01–0.05 for RRF scores)
+# Hybrid — regex + semantic (threshold range 0.01–0.05 for RRF)
 ck --hybrid "async function" .
 ck --hybrid --limit 10 --threshold 0.02 "error" .
 
-# Regex — exact identifiers (default mode, no index needed)
-ck "fn authenticate" src/
-ck -r "AuthController" .
+# Regex — exact identifiers (default, no index needed)
+ck 'fn authenticate' src/
+ck -r 'AuthController' .
 
 # JSONL output — preferred for agent consumption
-# Fields: path, span (byte_start, byte_end, line_start, line_end), language, snippet, score
 ck --jsonl --sem "error handling" .
-ck --jsonl --sem --limit 10 --threshold 0.7 "auth" .
-
-# Metadata-only JSONL (no snippet — smaller, faster)
-# Fields: path, span, language, score
 ck --jsonl --no-snippet --sem "error handling" .
 
-# JSON output — single array, fields differ from JSONL: uses "file", "preview", "lang"
+# JSON output (different field names: file, preview, lang)
 ck --json --sem "error handling" .
 ```
 
 ## Adaptive Threshold
 
-Default threshold for `--sem` is `0.6`. Start at `0.7` for focused results. Adjust
-based on output:
+Default `--sem` threshold is `0.6`. Adjust based on output:
 - Too few results → lower to `0.5`
 - Too many results → raise to `0.8`
-- Never go above `0.9` (too restrictive) or below `0.3` (too noisy)
+- Never above `0.9` or below `0.3`
 
-**Note:** `--hybrid` uses RRF scores, not cosine similarity. The useful range for
-`--threshold` with `--hybrid` is `0.01–0.05`, not `0.0–1.0`.
+`--hybrid` uses RRF scores — useful range is `0.01–0.05`, not `0.0–1.0`.
 
-When no results are found, `ck` shows the nearest match beneath the threshold:
-
-```
-No matches found
-
-(nearest match beneath the threshold)
-[0.687] src/auth.rs:1:fn authenticate(user: &str, pass: &str) -> Result<(), String> {
-```
-
-Use the score shown to decide whether to retry with a lower threshold.
-
-## Output Formats
-
-- **Default** — grep-style, human-readable
-- **`--scores`** — adds `[0.950]` score on its own line before each result block
-- **`--jsonl`** — one JSON object per line; fields: `path`, `span`, `language`, `snippet`, `score`
-- **`--jsonl --no-snippet`** — same without `snippet`; fields: `path`, `span`, `language`, `score`
-- **`--json`** — single JSON array; fields: `file`, `span`, `lang`, `preview`, `score`, `signals`
+When no results are found, `ck` shows the nearest match beneath the threshold — use the score shown to decide whether to retry with a lower value.
 
 ## Do / Don't
 
 **Do:**
 - Use single quotes for regex patterns containing `$` or `[`
-- After first indexing a project, run `echo "*" > .ck/.gitignore` to prevent index files polluting git
-- Run `ck --index .` at the start of a session before using `--sem`, `--lex`, or `--hybrid`
+- After first indexing a project, run `echo "*" > .ck/.gitignore`
+- Run `ck --index .` before using `--sem`, `--lex`, or `--hybrid`
 - Use `--sem` for conceptual or behavioral searches
-- Use default regex mode for exact identifiers (no index needed)
 - Use `--jsonl --limit 20` when results will be processed programmatically
 - Use `--no-snippet` when you only need file paths and scores
-- Use `--rerank` when result ordering matters
-- Start semantic, then refine with hybrid or regex once you have identifiers
-- Use `--threshold 0.01–0.05` with `--hybrid`, not the semantic range
 - Check `.ckignore` whenever a file you expect isn't showing up in results
-- Reach for `cqs` when you need call graph navigation, impact analysis, or refactoring safety
 
 **Don't:**
 - Use double quotes for patterns with `$` or `[` — the shell expands them silently before `ck` receives the pattern
 - Use `grep`, `rg`, or Glob for source code search — but DO use them for excluded file types
 - Use `--threshold` above `0.9` or below `0.3` for semantic search
-- Apply semantic threshold values (0.0–1.0) to hybrid searches — hybrid uses RRF (0.01–0.05)
-- Re-index unnecessarily — `ck` handles incremental updates automatically
+- Apply semantic threshold values to hybrid searches — hybrid uses RRF (0.01–0.05)
 - Use `--lex` without a prior `--index` run — results will be empty or unreliable
 - Assume `.ckignore` only affects indexing — it silently excludes files from all search modes

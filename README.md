@@ -189,29 +189,6 @@ The `skills/` directory in this repo contains skill files for:
 Add a `skills/<toolname>/SKILL.md` to the repo and it will be installed
 automatically on the next `zproj integrate` run.
 
-### Code search tools and git worktrees
-
-`ck` and `cqs` both store their indexes inside the project directory (`.ck/`
-and `.cqs/`). In a bare worktree setup, each worktree has its own index. To
-avoid slow cold indexing when creating a new worktree, copy the index from
-the most recently indexed sibling:
-
-```bash
-# When starting a new worktree (e.g. feature-auth)
-ls -dt ../*/. | head -5            # find most recently indexed sibling
-
-cp -r ../main/.ck  ./.ck           # copy ck index
-cp -r ../main/.cqs ./.cqs          # copy cqs index
-echo "*" > .ck/.gitignore          # prevent index files polluting git
-
-ck --index .                       # delta-index (~0.2s — reuses cached embeddings)
-cqs index                          # delta-index (~27s — reuses blake3-hashed chunks)
-```
-
-Both tools use content hashing (not mtime), so unchanged files are reused
-from the copied index. Only files that actually differ on the feature branch
-get re-processed.
-
 ## Command reference
 
 ```

@@ -1,6 +1,6 @@
 ---
 name: cqs
-description: "Use cqs to understand code relationships — who calls what, what breaks if X changes, type dependencies, dead code, refactoring safety, diff review, and assembling context from the call graph. cqs answers 'how does it connect?' For locating code by meaning or pattern, use ck instead. Triggers: who calls this, what calls this, callers, callees, impact analysis, what breaks, refactor, rename, change signature, dead code, trace call path, what uses this type, review diff, codebase health."
+description: "Use cqs for call graph analysis: callers, callees, impact of changing a function, dead functions, refactoring safety, diff risk. Requires a callable function name — does not find text, types, or identifiers. Triggers: who calls this, what breaks if I change, impact analysis, callers, callees, dead code, refactor function, rename function, review diff."
 license: MIT
 compatibility: opencode
 metadata:

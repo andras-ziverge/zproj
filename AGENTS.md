@@ -35,7 +35,6 @@ script — read and edit it directly. Do not create additional source files.
 **Do not:**
 - Create additional source files — everything lives in `zproj`
 - Commit with failing or skipped tests
-- Use `grep` or `rg` to search the codebase — use the `ck` skill instead
 
 ## Architecture
 
